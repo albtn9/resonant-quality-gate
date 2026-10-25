@@ -1,0 +1,39 @@
+{
+  "name": "resonant-quality-gate",
+  "version": "1.0.0",
+  "description": "Desafio QA Automation - API (Bookstore) e UI (DemoQA) com Cypress + Cucumber",
+  "private": true,
+  "scripts": {
+    "cy:open": "cypress open",
+    "test": "cypress run",
+    "test:api": "cypress run --expose tags=\"@api and not @known-bug\"",
+    "test:ui": "cypress run --expose tags=\"@ui and not @known-bug\"",
+    "test:smoke": "cypress run --expose tags=@smoke",
+    "test:known-bugs": "cypress run --expose tags=@known-bug",
+    "report": "node scripts/generate-report.mjs",
+    "format": "prettier --write .",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@badeball/cypress-cucumber-preprocessor": "^28.0.1",
+    "@bahmutov/cypress-esbuild-preprocessor": "^2.2.8",
+    "@eslint/js": "^10.0.1",
+    "@faker-js/faker": "^10.6.0",
+    "ajv": "^8.20.0",
+    "cypress": "^16.2.0",
+    "cypress-plugin-api": "^2.12.3",
+    "dotenv": "^18.0.9",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.13.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-cypress": "^7.0.2",
+    "globals": "^17.13.0",
+    "multiple-cucumber-html-reporter": "^4.5.0",
+    "prettier": "^3.9.10"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

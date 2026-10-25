@@ -1,0 +1,9 @@
+{
+  "stepDefinitions": ["cypress/support/step_definitions/**/*.js"],
+  "json": {
+    "enabled": true,
+    "output": "reports/cucumber-report.json"
+  },
+  "filterSpecs": true,
+  "omitFiltered": true
+}
