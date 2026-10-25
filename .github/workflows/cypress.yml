@@ -1,0 +1,77 @@
+name: Testes
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  qualidade:
+    name: Lint e formatação
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      # O binário do Cypress não é necessário para lint.
+      - run: npm ci
+        env:
+          CYPRESS_INSTALL_BINARY: '0'
+      - run: npm run lint
+      - run: npm run format:check
+
+  testes:
+    name: Testes (${{ matrix.suite }})
+    needs: qualidade
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [api, ui]
+    env:
+      # Opcionais: defina em Settings > Variables para trocar de ambiente
+      # (ex.: API_URL=https://bookstore.toolsqa.com). Vazio = padrão do projeto.
+      BASE_URL: ${{ vars.BASE_URL }}
+      API_URL: ${{ vars.API_URL }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - uses: cypress-io/github-action@v7
+        with:
+          browser: chrome
+          command: npm run test:${{ matrix.suite }}
+
+      - name: Gerar relatório HTML
+        if: always()
+        run: npm run report
+        continue-on-error: true
+
+      - name: Publicar relatório
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: relatorio-${{ matrix.suite }}
+          path: reports/
+          if-no-files-found: ignore
+
+      - name: Publicar screenshots das falhas
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: screenshots-${{ matrix.suite }}
+          path: cypress/screenshots/
+          if-no-files-found: ignore
