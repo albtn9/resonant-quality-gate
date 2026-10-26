@@ -51,6 +51,40 @@ cp .env.example .env   # opcional: troca as URLs
 
 Tags: `@api`, `@ui`, `@smoke`, `@negativo`, `@bonus`, `@fluxo-completo` e `@known-bug`.
 
+## Rastreabilidade: desafio → testes
+
+### Parte 1 – API
+
+O fluxo roda como **um único cenário contínuo** (`bookstore.feature` → _Criar usuário, autorizar e reservar dois livros_), como o desafio pede.
+
+| Passo do desafio                          | Endpoint                         | Step no cenário                                         |
+| ----------------------------------------- | -------------------------------- | ------------------------------------------------------- |
+| 1. Criar um usuário                       | `POST /Account/v1/User`          | `um novo usuário criado pela API`                       |
+| 2. Gerar um token de acesso               | `POST /Account/v1/GenerateToken` | `eu gero um token de acesso`                            |
+| 3. Confirmar se o usuário está autorizado | `POST /Account/v1/Authorized`    | `o usuário está autorizado`                             |
+| 4. Listar os livros disponíveis           | `GET /BookStore/v1/Books`        | `eu listo os livros disponíveis`                        |
+| 5. Alugar dois livros                     | `POST /BookStore/v1/Books`       | `eu reservo 2 livros disponíveis`                       |
+| 6. Listar os detalhes do usuário          | `GET /Account/v1/User/{userId}`  | `os detalhes do usuário mostram os 2 livros reservados` |
+
+Além do fluxo: senha fraca (400), consulta sem token (401) e o smoke test (`smoke.feature`).
+
+### Parte 2 – UI
+
+| Tela            | Passo do desafio                                      | Onde está coberto                                                                                         |
+| --------------- | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Practice Form   | Preencher todo o formulário com valores aleatórios    | `practice-form.feature` → _Preencher, enviar e fechar o formulário com valores aleatórios_ (faker)        |
+| Practice Form   | Upload de um `.txt` presente no repositório           | `cypress/fixtures/upload.txt`                                                                             |
+| Practice Form   | Submeter e garantir que o popup abriu                 | `um popup de confirmação deve ser aberto` e `o popup deve exibir os dados informados`                     |
+| Practice Form   | Fechar o popup                                        | `eu fecho o popup com a tecla Esc` (o botão Close é o BUG-01, cenário `@known-bug`)                       |
+| Browser Windows | Abrir a nova janela e validar "This is a sample page" | `browser-windows.feature` → _Abrir uma nova janela e validar a mensagem exibida_ (stub de `window.open`)  |
+| Browser Windows | Fechar a nova janela                                  | `eu fecho a nova janela` e `eu devo voltar para a página Browser Windows`                                 |
+| Web Tables      | Criar, editar e deletar um registro                   | `web-tables.feature` → _Criar, editar e deletar um novo registro_                                         |
+| Web Tables      | **Bônus:** 12 registros dinâmicos via Cucumber        | _Criar 12 registros dinamicamente…_ e _Criar 12 registros a partir de uma tabela do Cucumber…_ (`@bonus`) |
+| Web Tables      | **Bônus:** deletar todos os registros criados         | Mesmos cenários `@bonus` (ver a ressalva do BUG-02)                                                       |
+| Progress Bar    | Parar antes de 25% e validar que é ≤ 25%              | `progress-bar.feature` → _Parar a barra antes de 25% e resetar ao atingir 100%_                           |
+| Progress Bar    | Iniciar de novo, chegar a 100% e resetar              | Mesmo cenário                                                                                             |
+| Sortable        | Ordenar os itens em ordem crescente (drag and drop)   | `sortable.feature` → _Ordenar os itens da lista em ordem crescente com drag and drop_                     |
+
 ## Estrutura
 
 ```
@@ -86,14 +120,19 @@ docs/
 - **Browser Windows:** o Cypress controla uma única aba. O teste intercepta `window.open` (stub), prova que a página tentou abrir `/sample`, visita essa URL na própria aba e "fecha" voltando à página anterior.
 - **Progress Bar:** em tempo real. Para antes de 25% com uma margem para a latência e, antes de resetar, espera o timer da barra ser cancelado (spy em `clearInterval`).
 - **Sortable:** o site usa o drag and drop nativo do HTML5, então o comando `dragTo` dispara os eventos de drag com um `DataTransfer` compartilhado. A lista nasce ordenada; por isso o teste a embaralha antes.
-- **Anúncios:** hosts de anúncios bloqueados (`blockHosts`) e banners escondidos por CSS, pois cobriam botões. O único erro de aplicação ignorado é o `findDOMNode`, documentado.
+- **Anúncios:** hosts de anúncios bloqueados (`blockHosts`) e banners escondidos por CSS, pois cobriam botões. Só são ignorados o erro `findDOMNode` (defeito do site, ver BUG-01) e os erros de scripts de outros domínios (anúncios); qualquer outro erro derruba o teste.
 
 ## Defeitos conhecidos do DemoQA
 
-Os cenários afetados ficam com a tag `@known-bug`, fora da execução padrão, e **falham de propósito** (`npm run test:known-bugs`). Detalhes, reprodução e evidências em [docs/defeitos.md](docs/defeitos.md):
+Os cenários afetados ficam com a tag `@known-bug`, fora da execução padrão, e **falham de propósito** (`npm run test:known-bugs`). Cada defeito tem relatório completo (passos, esperado, observado, causa provável e evidência) em [docs/defeitos.md](docs/defeitos.md).
 
-- **BUG-01:** o botão Close não fecha o popup do Practice Form. O fluxo principal fecha com a tecla Esc.
-- **BUG-02:** deletar um registro criado na Web Tables remove outros registros criados. O bônus valida o resultado final pedido (nenhum registro criado permanece e os originais são preservados), o que **não prova** a exclusão individual; o cenário `@known-bug` cobre essa expectativa.
+| ID     | Tela          | Severidade | Status | Reproduzido aqui | Como a automação lida                                                        |
+| ------ | ------------- | ---------- | ------ | ---------------- | ---------------------------------------------------------------------------- |
+| BUG-01 | Practice Form | Média      | Aberto | Sim              | O fluxo fecha o popup com Esc; o botão Close fica em `@known-bug`            |
+| BUG-02 | Web Tables    | Alta       | Aberto | Sim              | O bônus valida o resultado final; a exclusão individual fica em `@known-bug` |
+| BUG-03 | Progress Bar  | Baixa      | Aberto | Não (observação) | O teste espera o timer parar antes de resetar                                |
+
+O bônus da Web Tables **não prova** a exclusão individual, por causa do BUG-02; isso está dito no relatório do defeito.
 
 ## CI
 
